@@ -6,7 +6,7 @@ import numpy as np
 st.set_page_config(page_title="My Streamlit App", layout="wide")
 
 # --- Header Section ---
-st.title('Welcome to My Streamlit App 👋')
+st.title('Welcome to My Streamlit App こんにちは 👋')
 st.write('This is a basic template to get you started with Streamlit.')
 
 # --- Interactive Widget Example ---
