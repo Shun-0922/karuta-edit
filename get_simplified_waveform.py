@@ -3,7 +3,7 @@ import soundfile as sf
 import numpy as np
 
 
-def get_simplified_waveform(input_path: str, output_path: str = "simplified_waveforms"):
+def get_simplified_waveform(input_path: str, output_path: str):
     os.makedirs(output_path, exist_ok=True)
     for i, files in enumerate(os.listdir(input_path)):
         if not files.endswith(".wav"):
@@ -31,4 +31,4 @@ def get_simplified_waveform(input_path: str, output_path: str = "simplified_wave
 
 
 if __name__ == "__main__":
-    get_simplified_waveform("wavs")
+    get_simplified_waveform("test/wavs", output_path="test/simplified_waveforms")
