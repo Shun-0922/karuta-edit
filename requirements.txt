@@ -5,3 +5,5 @@ streamlit
 altair<5
 moviepy
 ffmpeg-python
+matplotlib
+tqdm
