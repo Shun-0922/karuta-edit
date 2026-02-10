@@ -4,6 +4,7 @@ import numpy as np
 import tempfile
 import os
 import subprocess
+import ffmpeg
 
 from utils import return_top_scores
 from offline_app import extract_audio, simplify_waveform, cut_and_concat_mp4
@@ -119,52 +120,47 @@ if st.session_state.state == 3:
     
     tmp_dir = "app/tmp"
     os.makedirs(tmp_dir, exist_ok=True)
-    segment_files = []
+    segment_paths = []
 
     for i, (start, end) in enumerate(segments):
         progress.progress((i + 1) / len(segments))
-        seg_file_name = f"seg_{i}.mp4"
-        seg_file_pass = os.path.join(tmp_dir, seg_file_name)
+        seg_path = os.path.join(tmp_dir, f"seg_{i}.mp4")
         duration = end - start
 
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-ss", str(start),
-            "-i", st.session_state.input_video,
-            "-t", str(duration),
-            #"-c", "copy",
-            "-c:v", "libx264",
-            "-c:a", "aac",
-            "-preset", "ultrafast",
-            seg_file_pass,
-        ]
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        segment_files.append(seg_file_name)
+        (
+            ffmpeg
+            .input(st.session_state.input_video, ss=start, t=duration)
+            .output(
+                seg_path,
+                vcodec="libx264",
+                acodec="aac",
+                preset="ultrafast"
+            )
+            .overwrite_output()
+            .run(quiet=True)
+        )
 
-    # --- concat 用ファイル作成 ---
-    concat_list = os.path.join(tmp_dir, "concat.txt")
-    with open(concat_list, "w") as f:
-        for seg in segment_files:
-            f.write(f"file '{seg}'\n")
+        segment_paths.append(seg_path)
 
-    # --- 結合 ---
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concat_list,
-        "-c", "copy",
-        output_video,
-    ]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode != 0:
-        print("Error in ffmpeg concat:", result.stderr.decode())
+    # --- concat ---
+    concat_file = os.path.join(tmp_dir, "concat.txt")
+    with open(concat_file, "w") as f:
+        for p in segment_paths:
+            file_name = p.split("/")[-1]
+            f.write(f"file '{file_name}'\n")
 
-    for seg in segment_files:
-        os.remove(os.path.join(tmp_dir, seg))
-    os.remove(concat_list)
+    (
+        ffmpeg
+        .input(concat_file, format="concat", safe=0)
+        .output(output_video, c="copy")
+        .overwrite_output()
+        .run()
+    )
+
+    # cleanup
+    for p in segment_paths:
+        os.remove(p)
+    os.remove(concat_file)
     os.rmdir(tmp_dir)
 
     with open(output_video, "rb") as f:
