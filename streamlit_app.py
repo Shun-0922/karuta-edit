@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import tempfile
 import os
-import subprocess
 import ffmpeg
 
 from utils import return_top_scores
