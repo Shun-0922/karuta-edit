@@ -1,7 +1,7 @@
 numpy
 pandas
 soundfile
-streamlit
+streamlit>=1.30
 altair<5
 moviepy
 ffmpeg-python
