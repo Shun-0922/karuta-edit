@@ -6,7 +6,7 @@ from tqdm import tqdm
 import time
 import subprocess
 import json
-from faster_whisper import WhisperModel
+
 
 
 from utils import return_top_scores
@@ -54,8 +54,8 @@ def extract_audio(input_video: str, output_audio: str):
 
 
 
-def simplify_waveform(input_file: str, output_file: str):
-    waveform, sample_rate = sf.read(input_file)
+def simplify_waveform(input_path: str, output_path: str):
+    waveform, sample_rate = sf.read(input_path)
     # モノラル化
     if len(waveform.shape) > 1:
         waveform = waveform.mean(axis=1)
@@ -69,8 +69,8 @@ def simplify_waveform(input_file: str, output_file: str):
     waveform = np.max(waveform, axis=1)
 
     waveform = waveform.copy()
-    np.save(output_file, waveform)
-    print(f"Saved simplified waveform to {output_file}")
+    np.save(output_path, waveform)
+    print(f"Saved simplified waveform to {output_path}")
 
 
 
@@ -144,7 +144,7 @@ def main():
 
     input_file = f"offline_app/{file_name}.mp4"
     extract_audio(input_file, output_audio=f"offline_app/{file_name}.wav")
-    simplify_waveform(f"offline_app/{file_name}.wav", output_file=f"offline_app/simplified_{file_name}.npy")
+    simplify_waveform(f"offline_app/{file_name}.wav", output_path=f"offline_app/simplified_{file_name}.npy")
     waveform = np.load(f"offline_app/simplified_{file_name}.npy")
 
     print("loaded simplified waveform. Time: ", time.time() - start_time)
