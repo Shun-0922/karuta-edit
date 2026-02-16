@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import tempfile
 import os
-import ffmpeg
-
 from utils import return_top_scores
 from offline_app import extract_audio, simplify_waveform, cut_and_concat_mp4
 
@@ -116,51 +114,13 @@ if st.session_state.state == 3:
             segments.append((start, end))
 
     output_video = os.path.join(st.session_state.tmpdir, "processed.mp4")
-    
-    tmp_dir = "app/tmp"
-    os.makedirs(tmp_dir, exist_ok=True)
-    segment_paths = []
 
-    for i, (start, end) in enumerate(segments):
-        progress.progress((i + 1) / len(segments))
-        seg_path = os.path.join(tmp_dir, f"seg_{i}.mp4")
-        duration = end - start
-
-        (
-            ffmpeg
-            .input(st.session_state.input_video, ss=start, t=duration)
-            .output(
-                seg_path,
-                vcodec="libx264",
-                acodec="aac",
-                preset="ultrafast"
-            )
-            .overwrite_output()
-            .run(quiet=True)
-        )
-
-        segment_paths.append(seg_path)
-
-    # --- concat ---
-    concat_file = os.path.join(tmp_dir, "concat.txt")
-    with open(concat_file, "w") as f:
-        for p in segment_paths:
-            file_name = p.split("/")[-1]
-            f.write(f"file '{file_name}'\n")
-
-    (
-        ffmpeg
-        .input(concat_file, format="concat", safe=0)
-        .output(output_video, c="copy")
-        .overwrite_output()
-        .run()
+    cut_and_concat_mp4(
+        input_video=st.session_state.input_video,
+        segments=segments,
+        output_video=output_video,
+        progress_callback=lambda p: progress.progress(p),
     )
-
-    # cleanup
-    for p in segment_paths:
-        os.remove(p)
-    os.remove(concat_file)
-    os.rmdir(tmp_dir)
 
     with open(output_video, "rb") as f:
         st.session_state.processed_video = f.read()
