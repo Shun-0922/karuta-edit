@@ -602,6 +602,41 @@ def cut_and_concat_mp4(
 
 
 
+def extract_preview_clip(
+    input_video: str,
+    center_sec: float,
+    before_sec: float,
+    after_sec: float,
+    output_path: str,
+) -> str:
+    """プレビュー用の短いクリップを高速生成する。
+
+    center_sec を中心に before_sec 前 ~ after_sec 後の区間を
+    低品質・低解像度でエンコードし output_path に書き出す。
+    """
+    start = max(0, center_sec - before_sec)
+    duration = (center_sec + after_sec) - start
+
+    inp = ffmpeg.input(input_video, ss=start, t=duration)
+    (
+        ffmpeg
+        .output(
+            inp,
+            output_path,
+            vcodec="libx264",
+            preset="ultrafast",
+            crf=30,
+            vf="scale=min(640\\,iw):-2",
+            acodec="aac",
+            movflags="+faststart",
+            **{"b:a": "128k"},
+        )
+        .overwrite_output()
+        .run(quiet=True)
+    )
+    return output_path
+
+
 def main():
     before = 0.5
     after = 2.5
