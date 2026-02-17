@@ -11,6 +11,7 @@ import json
 import threading
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import ffmpeg
+import tqdm
 
 
 
@@ -597,48 +598,64 @@ def cut_and_concat_mp4(
 
 
 
+
+
+
+
 def main():
-    file_name = "test2"
-    before = 2.0
-    after = 3.0
+    before = 0.5
+    after = 2.5
+
+    file_names = os.listdir("offline_app")
 
 
     start_time = time.time()
 
-    input_file = f"offline_app/{file_name}.mp4"
-    extract_audio(input_file, output_audio=f"offline_app/{file_name}.wav")
-    simplify_waveform(f"offline_app/{file_name}.wav", output_path=f"offline_app/simplified_{file_name}.npy")
-    waveform = np.load(f"offline_app/simplified_{file_name}.npy")
+    for file_name_ in file_names:
+        if not file_name_.endswith(".mp4"):
+            continue
+        file_name = file_name_.replace(".mp4","")
 
-    print("loaded simplified waveform. Time: ", time.time() - start_time)
+        input_file = f"offline_app/{file_name}.mp4"
+        extract_audio(input_file, output_audio=f"offline_app/{file_name}.wav")
+        simplify_waveform(f"offline_app/{file_name}.wav", output_path=f"offline_app/simplified_{file_name}.npy")
+        waveform = np.load(f"offline_app/simplified_{file_name}.npy")
 
-    _, score_dict = return_top_scores(waveform)
+        print("loaded simplified waveform. Time: ", time.time() - start_time)
 
-    print("calculated scores. Time: ", time.time() - start_time)
+        _, score_dict = return_top_scores(waveform)
 
-    sorted_scores = sorted(score_dict.items(), key=lambda x: x[0])
+        print("calculated scores. Time: ", time.time() - start_time)
 
-    for idx, score in sorted_scores:
-        print(f"Time: {idx/10} s, Score: {score/100} pts")
+        sorted_scores = sorted(score_dict.items(), key=lambda x: x[0])
 
-    segments = []
-    for idx, score in sorted_scores:
-        center_time = idx / 10.0
-        start = max(0.1, center_time - before)
-        end = min(center_time + after, len(waveform) / 10.0 - 0.1)
-        segments.append((start, end))
+        for idx, score in sorted_scores:
+            print(f"Time: {idx/10} s, Score: {score/100} pts")
 
+        segments = []
+        for idx, score in sorted_scores:
+            center_time = idx / 10.0
+            start = max(0.1, center_time - before)
+            end = min(center_time + after, len(waveform) / 10.0 - 0.1)
+            segments.append((start, end))
 
-    cut_and_concat_mp4(
-        input_video=f"offline_app/{file_name}.mp4",
-        segments=segments,
-        output_video=f"offline_app/processed_{file_name}.mp4",
-    )
+        with tqdm.tqdm(total=100) as bar:
 
-    print("Processed video. Time: ", time.time() - start_time)
+            def progress_callback(p):
+                bar.n = int(p * 100)
+                bar.refresh()
 
-    os.remove(f"offline_app/{file_name}.wav")
-    os.remove(f"offline_app/simplified_{file_name}.npy")
+            cut_and_concat_mp4(
+                input_video=f"offline_app/{file_name}.mp4",
+                segments=segments,
+                output_video=f"offline_app/{file_name}短縮版.mp4",
+                progress_callback=progress_callback,
+            )
+
+        print("Processed video. Time: ", time.time() - start_time)
+
+        os.remove(f"offline_app/{file_name}.wav")
+        os.remove(f"offline_app/simplified_{file_name}.npy")
 
 
 
