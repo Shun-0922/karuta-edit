@@ -61,28 +61,33 @@ def _run_output_stream(
     total = max(0.0, float(total_duration_sec or 0.0))
     last_progress = -1.0
 
-    if process.stdout is not None:
-        for raw_line in process.stdout:
-            line = raw_line.strip()
-            if not line or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-
-            if key == "out_time_ms" and total > 0:
-                try:
-                    out_time_sec = int(value) / 1_000_000.0
-                except ValueError:
+    try:
+        if process.stdout is not None:
+            for raw_line in process.stdout:
+                line = raw_line.strip()
+                if not line or "=" not in line:
                     continue
-                progress = min(0.999, max(0.0, out_time_sec / total))
-                if progress - last_progress >= 0.005:
-                    progress_callback(progress)
-                    last_progress = progress
-            elif key == "progress" and value == "end":
-                progress_callback(1.0)
+                key, value = line.split("=", 1)
 
-    return_code = process.wait()
-    if return_code != 0:
-        raise RuntimeError(f"ffmpeg exited with status {return_code}")
+                if key == "out_time_ms" and total > 0:
+                    try:
+                        out_time_sec = int(value) / 1_000_000.0
+                    except ValueError:
+                        continue
+                    progress = min(0.999, max(0.0, out_time_sec / total))
+                    if progress - last_progress >= 0.005:
+                        progress_callback(progress)
+                        last_progress = progress
+                elif key == "progress" and value == "end":
+                    progress_callback(1.0)
+
+        return_code = process.wait()
+        if return_code != 0:
+            raise RuntimeError(f"ffmpeg exited with status {return_code}")
+    finally:
+        if process.stdout:
+            process.stdout.close()
+        process.wait()
 
 
 def _merge_close_segments(
