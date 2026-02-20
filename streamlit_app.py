@@ -199,6 +199,7 @@ if st.session_state.state == 2:
                 st.video(clip_path, autoplay=True)
         else:
             st.info("▶ 再生ボタンを押してプレビュー")
+            st.info("Scoreの高さは、上の句の開始時点が含まれる可能性の高さを示します")
 
     # 右カラム: セグメントリスト (スクロール可能コンテナ)
     with col_list:
@@ -211,10 +212,12 @@ if st.session_state.state == 2:
 
                 col_cb, col_info, col_play = st.columns([0.5, 3, 1])
                 with col_cb:
+                    key = f"cb_{idx}"
+                    if key not in st.session_state:
+                        st.session_state[key] = st.session_state.segment_enabled.get(idx, True)
                     checked = st.checkbox(
                         f"seg_{idx}",
-                        value=st.session_state.segment_enabled.get(idx, True),
-                        key=f"cb_{idx}",
+                        key=key,
                         label_visibility="collapsed",
                     )
                     if checked != st.session_state.segment_enabled.get(idx, True):
@@ -223,7 +226,8 @@ if st.session_state.state == 2:
                 with col_info:
                     st.markdown(
                         f"**#{i + 1}** &nbsp; "
-                        f"[{format_time(seg_start)} - {format_time(seg_end)}]"
+                        f"[{format_time(seg_start)} - {format_time(seg_end)}] &nbsp; "
+                        f"Score: {sorted_scores[i][1]/100}"
                     )
                 with col_play:
                     is_playing = preview_playing == idx
